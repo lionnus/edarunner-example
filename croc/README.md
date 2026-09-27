@@ -11,14 +11,18 @@ walkthrough in the top-level `README.md` shows how to run it.
 ```
 edarunner-example/
   rtl/          the Croc clone, with the PDK submodule in ihp13/pdk
-  rtl-wt/       one worktree per commit, created by `edr checkout`
+  rtl-wt/       one clone per commit, created by `edr checkout`
   croc/         this project
     data/       the run database, the collected results and the board
 ```
 
 In `edr.toml`, `source.repo` points at `../rtl` and `source.worktrees` at
-`../rtl-wt`. If you give the project its own backend repository, keep the
-same arrangement: the RTL clone sits next to the project, never inside it.
+`../rtl-wt`. This example keeps the project beside the clone so that one
+repository can hold both the site file and the project. In a lab, the
+project lives as an `edr/` directory inside the repository of the flow,
+with `data/` ignored by git. Croc's flow scripts are part of Croc, so
+that directory would be `rtl/edr/`, with `source.repo = ".."` and
+`source.worktrees = "../../rtl-wt"`.
 
 ## Stages
 

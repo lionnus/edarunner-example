@@ -18,5 +18,5 @@ touch there.
 
 The directories are `site/` (the site template, which a lab copies to
 `~/.config/edarunner/`), `croc/` (the edarunner project for Croc), `rtl/`
-and `rtl-wt/` (the Croc clone and its worktrees, both outside git), and
+and `rtl-wt/` (the Croc clone and a clone per commit, both outside git), and
 `.github/` (CI).

@@ -5,8 +5,8 @@ schema = 1
 project = "croc"
 site = "~/.config/edarunner/site.toml"
 
-# The Croc clone sits next to this directory, and `edr checkout` adds a worktree for each
-# commit. Since the PDK is a submodule, every worktree gets its own clone of it.
+# The Croc clone sits next to this directory, and `edr checkout` makes a local clone of
+# each commit. Since the PDK is a submodule, every clone gets its own clone of it.
 [source]
 repo = "../rtl"
 worktrees = "../rtl-wt"
@@ -23,6 +23,13 @@ EDR_CONTAINER = "hpretl/iic-osic-tools:2025.12"
 [sync]
 exclude = [".git", "artistic"]
 after = "if [ {host} = local ]; then d={root}/.edr/; else d={host}:{root}/.edr/; fi; rsync -a hooks/container.sh $d"
+
+# Croc runs its Python inside the tool image, so it needs no setup step. A flow with a
+# uv.lock in its tree builds its venv on the host before the first stage:
+# [runtime]
+# setup = "uv sync --frozen"
+# when_changed = ["uv.lock"]
+# and in [env]: UV_CACHE_DIR = "{mount}/{user}/uv-cache", PATH = "{root}/.venv/bin:$HOME/.local/bin:$PATH"
 
 [limits]
 stagger_s = 0

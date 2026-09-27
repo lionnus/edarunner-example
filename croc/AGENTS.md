@@ -12,7 +12,7 @@ explains the rules in more depth.
 
 ## Reads
 
-The worktrees under `../rtl-wt/<hash>` that `edr checkout` creates, but
+The clones under `../rtl-wt/<hash>` that `edr checkout` creates, but
 never `../rtl/` directly. The site file at `~/.config/edarunner/site.toml`.
 And `data/`, where edr keeps the run database, the collected results and
 the board.

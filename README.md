@@ -6,12 +6,15 @@ through Yosys, OpenROAD and KLayout on the IHP SG13G2 PDK, all the way from
 the RTL to a GDS file and a DRC report. Every tool is open source, so you
 don't need a licence to try it.
 
+The repository is a showcase that bundles a site file and a project, so
+you can read both in one place. A lab keeps the site file on its head
+node and the project config inside the repository of the flow it drives.
+
 ```
 site/                    the site template; you copy it to ~/.config/edarunner/
   site.toml              hosts, scratch, tools, marks, and the bot (commented out)
   hooks/flexlm_free.sh   seat probe for a FlexLM licence feature
   hooks/machine_check.sh free cores, RAM and scratch on each host
-  hooks/seed_python.sh   sync hook that copies a venv interpreter to host scratch
 croc/                    the flow project
   edr.toml               seven stages from synth to drc, plus the metrics
   jobs/synth.toml        synthesis only, for a first quick batch
@@ -24,14 +27,15 @@ AGENTS.md, CLAUDE.md     the rules for agents in the whole repository
 .github/workflows/ci.yml the walkthrough below, run in CI
 ```
 
-The two directories stand for two different repositories in a real lab.
-`site/` shows what a lab's private site repository looks like. That file
-lists the lab's machines, licence servers and chat, so a lab keeps its own
-copy private and never puts it in a public project like this one. `croc/`
-shows what a project's backend repository looks like. It describes the
-flow but names no machine, which is why the same files run unchanged in
-any lab. A new lab copies `site/` once and fills in its hosts. A new
-project starts from `croc/` and changes the stages and the metrics.
+`site/` shows what a lab's site file looks like. It lists the lab's
+machines, licence servers and chat, so a lab keeps its own copy private,
+at most in a repository of its own, and never in a public project like
+this one. `croc/` is the project. It describes the flow but names no
+machine, which is why the same files run unchanged in any lab. In a lab it
+would be an `edr/` directory inside the flow's repository, and
+`croc/README.md` says what changes then. A new lab copies `site/` once and
+fills in its hosts. A new project starts from `croc/` and changes the
+stages and the metrics.
 
 ## What you need
 
@@ -109,16 +113,17 @@ things:
 
 ```sh
 cd croc
-edr checkout v2.0.0          # prints b714f2d and the path of a new worktree
+edr checkout v2.0.0          # prints b714f2d and the path of a new clone
 edr check                    # loads every file and probes the hosts
 edr plan synth               # shows the run id, the host and the run tree
 edr launch synth --dry-run   # prints every path and command, writes nothing
 edr launch synth
 ```
 
-`edr checkout` creates a detached worktree of Croc at `../rtl-wt/b714f2d`
-with its own copy of the PDK. Each run works on a copy of that worktree,
-so whatever you change in `rtl/` later can't affect a run in progress.
+`edr checkout` makes a local clone of Croc at `../rtl-wt/b714f2d`,
+detached at that commit, with its own copy of the PDK. Each run works on
+a copy of that clone, so whatever you change in `rtl/` later can't affect
+a run in progress.
 Read the paths in the dry run before you launch for real.
 
 ### 6. Watch the run
@@ -187,7 +192,19 @@ The snapshot contains `manifest.json` with a sha256 for every file,
 each label, under `<label>/`. Copy the directory into your analysis as it
 is, and quote the hash next to every number you take from it.
 
-<!-- mlflow: filled after the analysis release -->
+If you prefer MLflow, edarunner 0.3.0 can write the database into a
+local MLflow tracking store, which `mlflow ui` then opens. The export
+needs the `mlflow` extra of edarunner:
+
+```sh
+uv tool install 'edarunner[mlflow] @ git+https://github.com/lionnus/edarunner'
+edr export --mlflow exports/mlflow --design b714f2d
+uvx mlflow ui --backend-store-uri sqlite:///exports/mlflow/mlflow.db --host 127.0.0.1 --port 5000
+```
+
+Each run becomes one MLflow run, with its parameters, its metrics at each
+step and the stage times. Running the export again after the next batch
+adds only the new runs.
 
 If you set up the Telegram bot in `site.toml`, you can ask the same
 questions from your phone. `/metric area_cell_um2` lists one metric for
@@ -276,7 +293,7 @@ The edarunner documentation lives at <https://lionnus.github.io/edarunner/>.
 - The DRC stage only checks the BEOL rules of the IHP deck, for reasons
   given in `croc/README.md`. Its count is not a signoff result.
 - In edarunner 0.3.0, `edr retire --batch` refuses to retire the last
-  batch on a commit. It tries to remove the worktree `../rtl-wt/<hash>` as
+  batch on a commit. It tries to remove the clone `../rtl-wt/<hash>` as
   well, and that path doesn't contain the safety marker `/edr/`. Until
   this is fixed, retire those runs one by one with their handles, for
   example `edr retire ihp13@croc --why "done"`.

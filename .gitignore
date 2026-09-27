@@ -1,4 +1,4 @@
-# The Croc clone and its worktrees, next to the project as in the walkthrough.
+# The Croc clone and a clone per commit, next to the project as in the walkthrough.
 /rtl/
 /rtl-wt/
 # What edr writes into the project: the run database, results, board and exports.
