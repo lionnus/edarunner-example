@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# container.sh <cmd> [args...]: run one stage command in the tool image, or directly.
+# container.sh <cmd> [args...]: run one stage command inside the tool image, or directly.
 #
-# EDR_CONTAINER names the image, such as hpretl/iic-osic-tools:2025.12. Empty runs directly.
-# EDR_RUNTIME says how the site runs it: oseda, apptainer, singularity, docker or none.
-# Unset, the first one on PATH wins. EDR_SIF_DIR holds <name>_<tag>.sif for apptainer and
-# singularity; without that file the image comes from the registry.
+# EDR_CONTAINER names the image, for example hpretl/iic-osic-tools:2025.12. If it is
+# empty, the command runs directly. EDR_RUNTIME says how the site runs the image: oseda,
+# apptainer, singularity, docker or none. If it is unset, the first one found on PATH is
+# used. For apptainer and singularity, EDR_SIF_DIR holds <name>_<tag>.sif; if that file
+# is missing, the image is pulled from the registry.
 #
-# The file sits at <run tree>/.edr/, where `sync.after` puts it.
+# `sync.after` copies this file to <run tree>/.edr/.
 set -euo pipefail
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 img=${EDR_CONTAINER:-}
@@ -24,7 +25,7 @@ echo "container.sh: runtime $rt, image ${img:-none}: $*"
 
 case $rt in
   none)
-    # Inside the IIC-OSIC-TOOLS image, as in CI, its bashrc puts the tools on PATH.
+    # Inside the IIC-OSIC-TOOLS image, as in CI, the image's bashrc puts the tools on PATH.
     if [ -f /headless/.bashrc ]; then
       exec bash -c 'export TOOLS=${TOOLS:-/foss/tools}; . /headless/.bashrc >/dev/null 2>&1; exec "$@"' bash "$@"
     fi
@@ -37,7 +38,7 @@ case $rt in
     echo "container.sh: $sif"
     exec "$rt" exec --bind "$root" "$sif" bash -c 'export TOOLS=${TOOLS:-/foss/tools}; . /headless/.bashrc >/dev/null 2>&1; exec "$@"' bash "$@" ;;
   docker)
-    # The entrypoint of the image sources its bashrc; --skip runs the command without a desktop.
+    # The image's entrypoint sources its bashrc, and --skip runs the command without a desktop.
     exec docker run --rm --user "$(id -u):$(id -g)" -e UID="$(id -u)" -e GID="$(id -g)" \
       -e IIC_OSIC_TOOLS_QUIET=1 -v "$root:$root" -w "$PWD" "$img" --skip "$@" ;;
   *)
