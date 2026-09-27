@@ -1,0 +1,69 @@
+# The site file of a lab: the hosts, the scratch, the tools, the marks and the bot.
+# Copy this directory to ~/.config/edarunner/, so the hooks resolve as {site_dir}/hooks.
+# Every host, server and path below is a placeholder. A lab keeps its real copy in a
+# private repository, because the file names its machines.
+schema = 1
+
+# The run trees go to the largest writable root of this list on each host.
+scratch = ["/scratch", "/tmp"]
+
+# EDR_RUNTIME tells croc/hooks/container.sh how this site runs a tool image: oseda,
+# apptainer, singularity, docker or none. Without it the first one on PATH wins.
+# EDR_SIF_DIR holds the images that `singularity pull` wrote, as <name>_<tag>.sif.
+env = { EDR_SIF_DIR = "$HOME/sif" }
+
+ssh = { options = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10"], timeout_s = 45 }
+
+# The tool processes that `edr hosts` counts and the orphan check looks for.
+tool_procs = "^(yosys|openroad|klayout)$"
+
+# The head node itself, reached without ssh. Put in its real cores and RAM.
+[hosts.local]
+cores = 4
+ram_gb = 16
+
+# Two compute hosts, reached over ssh with a key and no prompt. Remove the comment
+# marks, put in the real names, and `edr check` probes each one.
+# [hosts.hostA]
+# cores = 64
+# ram_gb = 256
+#
+# [hosts.hostB]
+# cores = 128
+# ram_gb = 512
+# tools = ["yosys", "openroad"]    # a list names the tools the host has; this one has no klayout
+
+# The open tools need no seat, so they have no probe: a host has them or not.
+[tools.yosys]
+[tools.openroad]
+[tools.klayout]
+
+# A tool behind a FlexLM licence server gets a probe. The driver runs it on the host
+# before the stage and waits while the free seats are below the seats the stage needs.
+# The hook must exist at this path on every host, so keep the site on a shared filesystem.
+# [tools.fc]
+# seats = 20
+# probe = ["bash", "{site_dir}/hooks/flexlm_free.sh", "27000@licence.example.com", "FEATURE-NAME"]
+
+# The marks of `edr hosts`: a resource turns yellow, orange and red at these fractions.
+[marks]
+cores = [0.6, 0.8, 0.9]
+ram = [0.6, 0.8, 0.9]
+scratch = [0.7, 0.85, 0.95]
+
+# Alerts, the pinned board and commands on a phone:
+# 1. Ask @BotFather on Telegram for a new bot with /newbot, and copy the token.
+# 2. Write the token to ~/.config/edarunner/telegram.token and run chmod 600 on it.
+# 3. Keep chat_id = 0, send the bot a message, and run `edr watch --once` in a project.
+#    The watcher prints the id of the chat the first message came from.
+# 4. Put that id in chat_id, and your own user id in user_id.
+# [telegram]
+# token_file = "~/.config/edarunner/telegram.token"
+# chat_id = 0
+# user_id = 0
+#
+# A custom command runs an argv on the head node; /survey then prints the host table.
+# [telegram.commands.survey]
+# help = "free cores, RAM and scratch on every host"
+# run = ["bash", "{site_dir}/hooks/machine_check.sh", "-c", "16", "-g", "80"]
+# timeout_s = 90
