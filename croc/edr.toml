@@ -1,26 +1,25 @@
 # The Croc SoC (github.com/pulp-platform/croc) through Yosys, OpenROAD and KLayout on
-# IHP SG13G2. One stage per flow script call, since each call ends one tool session and
-# leaves a checkpoint. No licence. croc/README.md explains every part.
+# IHP SG13G2. Each call of a Croc flow script is its own stage, because every call ends
+# its tool session and leaves a checkpoint behind. croc/README.md explains the details.
 schema = 1
 project = "croc"
 site = "~/.config/edarunner/site.toml"
 
-# The Croc clone sits next to this directory; `edr checkout` adds one worktree per commit.
-# The PDK is a submodule, so each worktree gets its own clone of it.
+# The Croc clone sits next to this directory, and `edr checkout` adds a worktree for each
+# commit. Since the PDK is a submodule, every worktree gets its own clone of it.
 [source]
 repo = "../rtl"
 worktrees = "../rtl-wt"
 ref = "HEAD"
 nested = ["ihp13/pdk"]
 
-# Every stage calls hooks/container.sh, so the same file serves native tools, a container
-# runtime and a site wrapper. The site env sets EDR_RUNTIME; this is the image the flow
-# scripts were written for.
+# Every stage goes through hooks/container.sh, so this file works with native tools, with
+# a container runtime and with a site's own wrapper. The site's env picks the runtime
+# through EDR_RUNTIME; this is the image that Croc's scripts were written for.
 [env]
 EDR_CONTAINER = "hpretl/iic-osic-tools:2025.12"
 
-# A host other than the head node may not see this directory, so the hook travels with
-# the tree.
+# A compute host may not see this directory, so the hook is copied into each run tree.
 [sync]
 exclude = [".git", "artistic"]
 after = "if [ {host} = local ]; then d={root}/.edr/; else d={host}:{root}/.edr/; fi; rsync -a hooks/container.sh $d"
@@ -34,8 +33,8 @@ max_per_host = 2
 min_free_cores = 2
 min_free_ram_gb = 8
 
-# The flow scripts pipe the tool through gawk and do not set pipefail, so a tool that
-# fails still exits 0. Each stage tests for its checkpoint.
+# Croc's scripts pipe the tool output through gawk without pipefail, so a tool that
+# crashes still exits with 0. Each stage checks for its own output file for that reason.
 [stages.synth]
 cwd = "yosys"
 cmd = "bash {root}/.edr/container.sh ./run_synthesis.sh --synth && test -s out/croc_yosys.v"
@@ -72,7 +71,7 @@ needs = { cores = 8, disk_gb = 10, tools = ["openroad"] }
 budget = { hours = 4 }
 collect = ["openroad/reports/", "openroad/logs/"]
 
-# OpenROAD writes the DEF, then KLayout streams it to GDS.
+# OpenROAD writes the DEF, and KLayout then converts it to GDS.
 [stages.finishing]
 cwd = "openroad"
 cmd = "bash {root}/.edr/container.sh ./run_backend.sh --finishing && test -s out/croc.def && cd ../klayout && bash {root}/.edr/container.sh ./run_finishing.sh --gds && test -s out/croc.gds.gz"
@@ -81,10 +80,11 @@ budget = { hours = 1 }
 collect = ["openroad/reports/", "openroad/logs/", "klayout/out/def2stream.log"]
 collect_on_request = { layout = ["openroad/out/", "klayout/out/"] }
 
-# The BEOL rules of the IHP deck: the standard cells come DRC clean, and the flow draws
-# the metal. The FEOL, density and extra rules take hours on the whole chip, and the
-# flow adds no fill before this stage. The deck exits 1 on a violation, so the stage
-# passes when it wrote its report database.
+# Only the BEOL rules of the IHP deck run here. The standard cells are DRC clean as
+# delivered, and the metal is what the flow draws. The FEOL, density and extra rules ran
+# for over 50 minutes on the whole chip, and there is no metal fill yet at this point.
+# The deck exits with 1 whenever it finds a violation, so the stage passes as long as
+# the report database was written.
 [stages.drc]
 cwd = "klayout"
 cmd = "rm -rf drc && bash {root}/.edr/container.sh python3 ../ihp13/pdk/ihp-sg13g2/libs.tech/klayout/tech/drc/run_drc.py --path=out/croc.gds.gz --topcell=croc_chip --run_dir=drc --mp={cores} --no_feol --no_density --disable_extra_rules; mv drc/croc.gds_croc_chip_*.lyrdb drc/croc.lyrdb"
@@ -99,8 +99,8 @@ regex = 'Chip area for top module \S+:\s+([0-9.]+)'
 unit = "um2"
 canonical = "design__instance__area"
 
-# The OpenROAD reports of each stage end with the same sections, so one pattern reads
-# a number after placement and after finishing.
+# Every OpenROAD stage report ends with the same sections, so the same pattern reads a
+# number after placement and after finishing.
 [metrics.util_core_place]
 stage = "place"
 file = "openroad/reports/02_croc.placed.rpt"

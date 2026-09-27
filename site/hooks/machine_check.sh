@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # machine_check.sh [-c cores] [-g scratch_gb] [-m ram_gb] [host ...]
-# One line per host: cores, load, free cores, free RAM, the largest writable scratch
-# and its free GB, and FIT when the host has what a job needs. One ssh per host, in
-# parallel. MC_HOSTS names the hosts when no argument does; MC_SCRATCH the roots.
+# Prints one line per host with its cores, load, free cores, free RAM, and the largest
+# writable scratch directory with its free space. FIT marks a host that has what a job
+# needs. The hosts are probed in parallel over ssh. Without arguments the host list comes
+# from MC_HOSTS, and MC_SCRATCH lists the scratch directories to look at.
 set -u
 need_c=0 need_g=0 need_m=0
 while getopts c:g:m: o; do

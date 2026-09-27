@@ -1,4 +1,4 @@
-# Synthesis alone: the first batch of the walkthrough and the CI check, about 10 min.
+# Only the synthesis. This is the first batch of the walkthrough and the one CI runs.
 batch = "synth"
 source = "v2.0.0"
 

@@ -1,31 +1,32 @@
 # The Croc flow project
 
-An edarunner project for the [Croc SoC](https://github.com/pulp-platform/croc)
-at tag `v2.0.0`: the scripts of Croc from the RTL to a GDS and a DRC report,
-in the IIC-OSIC-TOOLS image 2025.12 or with native tools. The walkthrough in
-the top `README.md` runs it.
+This directory is an edarunner project for the
+[Croc SoC](https://github.com/pulp-platform/croc) at tag `v2.0.0`. It runs
+Croc's own scripts from the RTL to a GDS file and a DRC report, either in
+the IIC-OSIC-TOOLS image 2025.12 or with natively installed tools. The
+walkthrough in the top-level `README.md` shows how to run it.
 
 ## Layout
 
 ```
 edarunner-example/
-  rtl/          the Croc clone, with the PDK submodule ihp13/pdk
-  rtl-wt/       one worktree per commit, made by `edr checkout`
+  rtl/          the Croc clone, with the PDK submodule in ihp13/pdk
+  rtl-wt/       one worktree per commit, created by `edr checkout`
   croc/         this project
     data/       the run database, the collected results and the board
 ```
 
-`source.repo` and `source.worktrees` in `edr.toml` point at `../rtl` and
-`../rtl-wt`. A project in its own backend repository keeps the same
-layout: the RTL clone next to it, never inside it.
+In `edr.toml`, `source.repo` points at `../rtl` and `source.worktrees` at
+`../rtl-wt`. If you give the project its own backend repository, keep the
+same arrangement: the RTL clone sits next to the project, never inside it.
 
-## The stages
+## Stages
 
-Each stage is one call of a Croc script in its directory. A call starts
-the tool, runs one step and writes a checkpoint, so a stage that fails
-leaves the stages before it intact.
+Each stage calls one of Croc's scripts in its own directory. Every call
+starts the tool, runs a single step and saves a checkpoint, so when a
+stage fails, the work of the stages before it is still there.
 
-| Stage | Directory | Command | Checks |
+| Stage | Directory | Command | Checked output |
 |---|---|---|---|
 | `synth` | `yosys/` | `run_synthesis.sh --synth` | `out/croc_yosys.v` |
 | `floorplan` | `openroad/` | `run_backend.sh --floorplan` | `save/01_croc.floorplan.zip` |
@@ -33,46 +34,53 @@ leaves the stages before it intact.
 | `cts` | `openroad/` | `run_backend.sh --cts` | `save/03_croc.cts.zip` |
 | `route` | `openroad/` | `run_backend.sh --routing` | `save/04_croc.routed.zip` |
 | `finishing` | `openroad/`, `klayout/` | `run_backend.sh --finishing`, then `run_finishing.sh --gds` | `out/croc.def`, `out/croc.gds.gz` |
-| `drc` | `klayout/` | `run_drc.py` of the IHP PDK, BEOL rules | `drc/croc.lyrdb` |
+| `drc` | `klayout/` | the IHP PDK's `run_drc.py`, BEOL rules only | `drc/croc.lyrdb` |
 
-The Croc scripts pipe the tool output through `gawk` without `pipefail`,
-so a tool that fails still exits 0. Each stage therefore tests for the
-file in the last column, and fails when it is missing.
+Croc's scripts pipe the tool output through `gawk` without setting
+`pipefail`, which means a crashed tool still leaves the script with exit
+code 0. That is why every stage also checks that its output file from the
+last column exists, and fails if it doesn't.
 
-The `drc` stage runs the BEOL rules of the IHP deck, about 12 min on
-eight cores. The standard cells come DRC clean, and the flow draws the
-metal. The FEOL, density and extra rules ran for more than 50 min on the
-whole chip before the test stopped them, and the flow adds no fill
-before this stage. The deck exits 1 when it finds a violation, so the
-stage passes when the report database exists, and the count goes into
-the metrics.
+The `drc` stage only runs the BEOL part of the IHP rule deck, which takes
+about 12 minutes on eight cores. The standard cells are DRC clean as
+delivered, and the metal is what the flow actually draws. In our first
+test the full deck, with the FEOL, density and extra rules, was still
+running after 50 minutes, so we stopped it. The flow also adds no metal
+fill before this stage, so the density rules would fail anyway. The deck
+exits with code 1 whenever it finds a violation. The stage therefore
+passes as long as the report database exists, and the number of
+violations goes into the metrics.
 
-`needs.tools` names the tools of each stage. The site file declares them,
-and a host with a `tools` list gets only the stages it can run.
+`needs.tools` lists the tools each stage uses. The site file declares
+them, and a host with a `tools` list only receives stages it can run.
 
 ## The container hook
 
-Every command goes through `hooks/container.sh`. `EDR_CONTAINER` in the
-`[env]` table names the image the scripts were written for. `EDR_RUNTIME`
-in the site `env` says how a site runs it:
+Every command runs through `hooks/container.sh`. `EDR_CONTAINER` in the
+`[env]` table of `edr.toml` names the image that Croc's scripts were
+written for, and `EDR_RUNTIME` in the site's `env` says how the site runs
+it:
 
 | `EDR_RUNTIME` | What runs |
 |---|---|
-| `apptainer`, `singularity` | `exec` of `$EDR_SIF_DIR/iic-osic-tools_2025.12.sif`, or of the registry image when that file is missing |
-| `docker` | `docker run` of the image, with the run tree mounted at its own path |
-| `oseda` | the ETH Zurich wrapper, `oseda -2025.12` |
-| `none` | the command itself, with the tools on `PATH` |
+| `apptainer`, `singularity` | `$EDR_SIF_DIR/iic-osic-tools_2025.12.sif`, or the image straight from the registry if that file is missing |
+| `docker` | `docker run` with the run tree mounted at the same path |
+| `oseda` | the ETH Zurich wrapper, as `oseda -2025.12` |
+| `none` | the command itself, using the tools on `PATH` |
 
-Without `EDR_RUNTIME` the first of `oseda`, `apptainer`, `singularity`
-and `docker` on `PATH` wins, else `none`. With `none` inside the image,
-as in CI, the hook sources the image's own shell setup first.
+If `EDR_RUNTIME` is not set, the hook takes the first of `oseda`,
+`apptainer`, `singularity` and `docker` that it finds on the `PATH`, and
+falls back to `none`. When it runs with `none` inside the image, as it
+does in CI, it sources the image's shell setup first so the tools are on
+the `PATH`.
 
-A compute host may not see this directory, so `sync.after` copies the hook
-into `.edr/` of each run tree after the sync.
+A compute host can't necessarily see this directory. After each sync,
+`sync.after` therefore copies the hook into the `.edr/` directory of the
+run tree.
 
-## The metrics
+## Metrics
 
-| Metric | Stage | File under the run tree | Pattern |
+| Metric | Stage | File in the run tree | Read from |
 |---|---|---|---|
 | `area_cell_um2` | `synth` | `yosys/reports/croc_area.rpt` | `Chip area for top module` |
 | `util_core_place` | `place` | `openroad/reports/02_croc.placed.rpt` | `Core Utilization:` |
@@ -81,28 +89,36 @@ into `.edr/` of each run tree after the sync.
 | `util_core_final` | `finishing` | `openroad/reports/05_croc.final.rpt` | `Core Utilization:` |
 | `wns_final_ns` | `finishing` | `openroad/reports/05_croc.final.rpt` | `wns max` |
 | `tns_final_ns` | `finishing` | `openroad/reports/05_croc.final.rpt` | `tns max` |
-| `drc_violations` | `drc` | `klayout/drc/croc.lyrdb` | one per `<item>`, by `hooks/drc_count.py` |
+| `drc_violations` | `drc` | `klayout/drc/croc.lyrdb` | one per `<item>`, counted by `hooks/drc_count.py` |
 
-For `v2.0.0` the DRC count is 925, all of them `Pad.fR` rules at the
-bond pads.
+The area is the Yosys cell area of `croc_chip`, including the pads and the
+SRAM macros. Utilization is given as a fraction of the core area, and a
+slack of 0 means the design met its clock. For `v2.0.0` we measured the
+following values, and they were the same on every host we tried:
 
-The area is the Yosys cell area of `croc_chip` with the pads and the
-SRAM macros. The utilization is a fraction of the core area. A slack of
-0 means the stage met the clock.
+| Metric | Value |
+|---|---|
+| `area_cell_um2` | 1 602 565.37 um2 |
+| `util_core_place` | 0.4446 |
+| `util_core_final` | 0.4581 |
+| `wns_place_ns`, `tns_place_ns` | 0 ns |
+| `wns_final_ns`, `tns_final_ns` | 0 ns |
+| `drc_violations` | 925, all of them `Pad.fR` rules at the bond pads |
 
-## The batches
+## Batches
 
 | File | Jobs |
 |---|---|
-| `jobs/synth.toml` | `ihp13`, the `synth` stage only |
-| `jobs/croc.toml` | `ihp13`, every stage |
+| `jobs/synth.toml` | `ihp13`, running only the `synth` stage |
+| `jobs/croc.toml` | `ihp13`, running every stage |
 
-Croc `v2.0.0` offers one PDK in public, IHP SG13G2 from the submodule. Its
-`env.sh` also accepts a `technology/` directory from the ETH Zurich design
-kit tools, which a stranger cannot get, so no job uses it. A second PDK in
-a later Croc version is one more `[[job]]` with its own label.
+Croc `v2.0.0` has one publicly available PDK, IHP SG13G2 from the
+submodule. Its `env.sh` also accepts a `technology/` directory generated
+by the ETH Zurich design kit tools, but people outside ETH can't get
+those, so no job uses it. If a later Croc version adds another PDK, it
+becomes one more `[[job]]` with its own label.
 
-A job with `overrides = { KEY = "value" }` passes `KEY=value` to a stage
-that has `{overrides}` in its command. The Croc scripts read `PROJ_NAME`
-and `TOP_DESIGN` from the environment, not from arguments, so these stages
-take no overrides.
+A job can set `overrides = { KEY = "value" }`, which passes `KEY=value` to
+any stage that has `{overrides}` in its command. Croc's scripts read
+`PROJ_NAME` and `TOP_DESIGN` from the environment rather than from
+arguments, so these stages don't take overrides.

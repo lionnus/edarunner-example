@@ -1,4 +1,4 @@
-"""The DRC violation count of a KLayout report database (.lyrdb): one per <item>."""
+"""Count the DRC violations in a KLayout report database (.lyrdb), one per <item>."""
 
 import xml.etree.ElementTree as ET
 

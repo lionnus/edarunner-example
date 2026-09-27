@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# wait.sh <cap_s>: run `edr watch --once` until no run is live, then fail unless every
-# run of the board ended done. The last cycle after the end collects the last stage.
+# wait.sh <cap_s>: call `edr watch --once` until no run is live, and fail unless every run
+# on the board ended as done. One extra cycle after the end collects the last stage.
 set -euo pipefail
 end=$((SECONDS + $1))
 while :; do

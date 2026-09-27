@@ -1,5 +1,6 @@
-# The whole flow, one job per PDK the Croc flow offers. Croc v2.0.0 offers one in public:
-# IHP SG13G2 from the submodule ihp13/pdk. `source` is the tag `edr checkout v2.0.0` printed.
+# The whole flow, with one job for each PDK that Croc offers. Croc v2.0.0 has a single
+# public one, IHP SG13G2 from the submodule ihp13/pdk. `source` is the tag that you
+# passed to `edr checkout`.
 batch = "croc"
 source = "v2.0.0"
 
