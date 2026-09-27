@@ -242,8 +242,12 @@ The edarunner documentation is at <https://lionnus.github.io/edarunner/>:
 
 - The `docker` branch of `container.sh` is not tested; the IIC-OSIC-TOOLS
   image runs in CI through the `container` key of the workflow instead.
-- The DRC stage runs the IHP rule deck without the density rules, because
-  the flow adds no fill before it. The count is not a signoff result.
+- The DRC stage runs the BEOL rules of the IHP deck only; `croc/README.md`
+  says why. The count is not a signoff result.
+- In edarunner 0.3.0, `edr retire --batch` refuses the last batch on a
+  commit. It also removes the worktree `../rtl-wt/<hash>`, and that path
+  lacks the safety marker `/edr/`. Retire such a run by its handle, as in
+  `edr retire ihp13@croc --why "done"`.
 
 ## License
 
