@@ -97,7 +97,7 @@ stage = "synth"
 file = "yosys/reports/croc_area.rpt"
 regex = 'Chip area for top module \S+:\s+([0-9.]+)'
 unit = "um2"
-canonical = "area.cell"
+canonical = "design__instance__area"
 
 # The OpenROAD reports of each stage end with the same sections, so one pattern reads
 # a number after placement and after finishing.
@@ -106,45 +106,44 @@ stage = "place"
 file = "openroad/reports/02_croc.placed.rpt"
 regex = 'Core Utilization:\s+([0-9.]+)'
 unit = "fraction"
-canonical = "util.core"
+canonical = "design__instance__utilization"
 
 [metrics.wns_place_ns]
 stage = "place"
 file = "openroad/reports/02_croc.placed.rpt"
 regex = 'wns max\s+(-?[0-9.]+)'
 unit = "ns"
-canonical = "timing.wns"
+canonical = "timing__setup__ws"
 
 [metrics.tns_place_ns]
 stage = "place"
 file = "openroad/reports/02_croc.placed.rpt"
 regex = 'tns max\s+(-?[0-9.]+)'
 unit = "ns"
-canonical = "timing.tns"
+canonical = "timing__setup__tns"
 
 [metrics.util_core_final]
 stage = "finishing"
 file = "openroad/reports/05_croc.final.rpt"
 regex = 'Core Utilization:\s+([0-9.]+)'
 unit = "fraction"
-canonical = "util.core"
+canonical = "design__instance__utilization"
 
 [metrics.wns_final_ns]
 stage = "finishing"
 file = "openroad/reports/05_croc.final.rpt"
 regex = 'wns max\s+(-?[0-9.]+)'
 unit = "ns"
-canonical = "timing.wns"
+canonical = "timing__setup__ws"
 
 [metrics.tns_final_ns]
 stage = "finishing"
 file = "openroad/reports/05_croc.final.rpt"
 regex = 'tns max\s+(-?[0-9.]+)'
 unit = "ns"
-canonical = "timing.tns"
+canonical = "timing__setup__tns"
 
 [metrics.drc_violations]
 stage = "drc"
 file = "klayout/drc/croc.lyrdb"
 python = "python:hooks/drc_count.py:count"
-canonical = "drc.count"
