@@ -1,0 +1,93 @@
+# The walkthrough of README.md inside the IIC-OSIC-TOOLS image, on the runner as host local.
+# Every push runs the checks and the synthesis. The whole flow runs once a week, and on demand.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+env:
+  CROC_TAG: v2.0.0
+
+jobs:
+  synth:
+    runs-on: ubuntu-latest
+    container:
+      image: hpretl/iic-osic-tools:2025.12
+      options: --user root
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      # The image has git and python3 but no rsync, which edr needs to copy a tree.
+      - run: apt-get update -qq && apt-get install -y -qq rsync
+      - run: curl -LsSf https://astral.sh/uv/install.sh | sh && echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - run: uv tool install git+https://github.com/lionnus/edarunner
+      - run: |
+          git clone -q --branch "$CROC_TAG" https://github.com/pulp-platform/croc rtl
+          git -C rtl submodule update --init --depth 1 ihp13/pdk
+      - run: mkdir -p ~/.config/edarunner && cp -r site/. ~/.config/edarunner/
+      - name: check and plan
+        working-directory: croc
+        run: |
+          edr checkout "$CROC_TAG"
+          edr check
+          edr plan croc --dry-run
+          edr launch croc --dry-run
+      - name: synth
+        working-directory: croc
+        timeout-minutes: 40
+        run: |
+          edr launch synth
+          bash ../.github/wait.sh 2100
+          src=$(git -C ../rtl rev-parse --short "$CROC_TAG^{commit}")
+          edr metrics --design "$src" --csv | tee metrics.csv
+          grep -q ",area_cell_um2," metrics.csv
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: synth
+          path: croc/data/results
+
+  backend:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    container:
+      image: hpretl/iic-osic-tools:2025.12
+      options: --user root
+    timeout-minutes: 360
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - run: apt-get update -qq && apt-get install -y -qq rsync
+      - run: curl -LsSf https://astral.sh/uv/install.sh | sh && echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - run: uv tool install git+https://github.com/lionnus/edarunner
+      - run: |
+          git clone -q --branch "$CROC_TAG" https://github.com/pulp-platform/croc rtl
+          git -C rtl submodule update --init --depth 1 ihp13/pdk
+      - run: mkdir -p ~/.config/edarunner && cp -r site/. ~/.config/edarunner/
+      - name: whole flow
+        working-directory: croc
+        run: |
+          edr checkout "$CROC_TAG"
+          edr launch croc
+          bash ../.github/wait.sh 20000
+          src=$(git -C ../rtl rev-parse --short "$CROC_TAG^{commit}")
+          edr metrics --design "$src" --csv | tee metrics.csv
+          grep -q ",wns_final_ns," metrics.csv
+          edr export --design "$src" --out "exports/$src"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend
+          path: |
+            croc/exports
+            croc/data/results
