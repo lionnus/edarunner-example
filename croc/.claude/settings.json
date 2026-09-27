@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && (edr brief 2>/dev/null || edr status --triage)"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && m=$(python3 -c 'import json, sys; t = (json.load(sys.stdin).get(\"last_assistant_message\") or \"\").strip(); print(t.splitlines()[0][:200] if t else \"\")') && edr notify --silent \"turn ended: $m\" >/dev/null 2>&1 || true"
+          }
+        ]
+      }
+    ]
+  }
+}

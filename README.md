@@ -1,45 +1,49 @@
 # edarunner-example
 
-A complete [edarunner](https://github.com/lionnus/edarunner) setup: a site
-template and a flow project for the open-source
-[Croc SoC](https://github.com/pulp-platform/croc). The flow runs Yosys,
-OpenROAD and KLayout on the IHP SG13G2 PDK, from the RTL to a GDS and a DRC
-report. It needs no licence.
+This repository is a complete, working [edarunner](https://github.com/lionnus/edarunner)
+setup. It runs the open-source [Croc SoC](https://github.com/pulp-platform/croc)
+through Yosys, OpenROAD and KLayout on the IHP SG13G2 PDK, all the way from
+the RTL to a GDS file and a DRC report. Every tool is open source, so you
+don't need a licence to try it.
 
 ```
-site/                    the site layer: copy to ~/.config/edarunner/
-  site.toml              hosts, scratch, tools, marks, the bot (commented)
-  hooks/flexlm_free.sh   the seat probe of a FlexLM feature
-  hooks/machine_check.sh free cores, RAM and scratch per host
-  hooks/seed_python.sh   a sync hook that puts a venv interpreter on host scratch
-croc/                    the project: the flow, the batches, the hooks
-  edr.toml               seven stages from synth to drc, and the metrics
-  jobs/synth.toml        synthesis alone, the first batch
+site/                    the site template; you copy it to ~/.config/edarunner/
+  site.toml              hosts, scratch, tools, marks, and the bot (commented out)
+  hooks/flexlm_free.sh   seat probe for a FlexLM licence feature
+  hooks/machine_check.sh free cores, RAM and scratch on each host
+  hooks/seed_python.sh   sync hook that copies a venv interpreter to host scratch
+croc/                    the flow project
+  edr.toml               seven stages from synth to drc, plus the metrics
+  jobs/synth.toml        synthesis only, for a first quick batch
   jobs/croc.toml         the whole flow
-  hooks/container.sh     runs a stage in the tool image, or directly
+  hooks/container.sh     runs a stage inside the tool image, or directly
   hooks/drc_count.py     counts the DRC violations
-.github/workflows/ci.yml the walkthrough below, in CI
+  AGENTS.md              how any coding agent operates the project
+  CLAUDE.md, .claude/    the Claude Code extras: hooks and a skill
+AGENTS.md, CLAUDE.md     the rules for agents in the whole repository
+.github/workflows/ci.yml the walkthrough below, run in CI
 ```
 
-The two halves have two owners. `site/` has the shape of a lab's private
-site repository: it names the machines, the licence servers and the chat,
-so it stays out of public view. `croc/` has the shape of a project's
-backend repository: it names the flow and no machine, so it runs
-unchanged in every lab. A new lab copies `site/` once and fills in its
-hosts. A new project copies `croc/` and changes the stages and the
-metrics.
+The two directories stand for two different repositories in a real lab.
+`site/` shows what a lab's private site repository looks like. That file
+lists the lab's machines, licence servers and chat, so a lab keeps its own
+copy private and never puts it in a public project like this one. `croc/`
+shows what a project's backend repository looks like. It describes the
+flow but names no machine, which is why the same files run unchanged in
+any lab. A new lab copies `site/` once and fills in its hosts. A new
+project starts from `croc/` and changes the stages and the metrics.
 
 ## What you need
 
 - A Linux machine with Python 3.11 or newer, `git`, `rsync` and
   [uv](https://docs.astral.sh/uv/).
-- The tools, in one of two ways:
-  - the [IIC-OSIC-TOOLS](https://github.com/iic-jku/IIC-OSIC-TOOLS) image
-    by Harald Pretl, version 2025.12, the version Croc supports, run
-    through `apptainer`, `singularity` or `docker`;
-  - or native installs of Yosys with the yosys-slang plugin, OpenROAD,
-    KLayout 0.30.3 or newer and `gawk`, all on `PATH`.
-- About 10 GB of free scratch, and 4 GB more for the image.
+- The EDA tools. The easiest way to get them is the
+  [IIC-OSIC-TOOLS](https://github.com/iic-jku/IIC-OSIC-TOOLS) image by
+  Harald Pretl in version 2025.12, which is the version Croc supports. You
+  can run it with `apptainer`, `singularity` or `docker`. Native installs
+  work too, as long as Yosys with the yosys-slang plugin, OpenROAD,
+  KLayout 0.30.3 or newer and `gawk` are on your `PATH`.
+- About 10 GB of free scratch space, plus 4 GB for the image.
 
 ## Walkthrough on one machine
 
@@ -52,9 +56,9 @@ edr --version
 
 ### 2. Get this repository and Croc
 
-The project expects the Croc clone next to it, in `rtl/`. Pin a tag: the
-flow scripts of Croc change between versions, and the stages here call
-them by name.
+The project expects the Croc clone to sit next to it, in `rtl/`. Use a
+tag rather than a branch, because the stages call Croc's flow scripts by
+name and those scripts change between versions.
 
 ```sh
 git clone https://github.com/lionnus/edarunner-example
@@ -63,24 +67,24 @@ git clone --branch v2.0.0 https://github.com/pulp-platform/croc rtl
 git -C rtl submodule update --init --depth 1 ihp13/pdk
 ```
 
-The PDK submodule is about 740 MB. `git` ignores `rtl/`.
+The PDK submodule is about 740 MB. Git ignores `rtl/` in this repository.
 
 ### 3. Get the tool image
 
-With `apptainer` or `singularity`, pull the image once into a directory
-with space:
+If you use `apptainer` or `singularity`, pull the image once into a
+directory with enough space:
 
 ```sh
 mkdir -p ~/sif
 singularity pull ~/sif/iic-osic-tools_2025.12.sif docker://hpretl/iic-osic-tools:2025.12
 ```
 
-The pull takes about 9 min and writes a 3.8 GB file. It leaves about
-8 GB in the cache, which `singularity cache clean` frees. Set
-`SINGULARITY_TMPDIR` and `SINGULARITY_CACHEDIR` to a scratch directory
-when `/tmp` or the home directory is small. With
-`docker`, the first stage pulls the image itself. With native tools, skip
-this step.
+On our machine the pull took about 9 minutes and wrote a 3.8 GB file. It
+also left about 8 GB in the Singularity cache, which
+`singularity cache clean` removes. If `/tmp` or your home directory is
+small, point `SINGULARITY_TMPDIR` and `SINGULARITY_CACHEDIR` at a scratch
+directory first. With `docker` you can skip this step, since the first
+stage pulls the image. With native tools you don't need an image at all.
 
 ### 4. Install the site file
 
@@ -89,104 +93,130 @@ mkdir -p ~/.config/edarunner
 cp -r site/. ~/.config/edarunner/
 ```
 
-Do not copy over a site file you already have; merge the tables by hand.
-Then edit `~/.config/edarunner/site.toml`:
+If you already have a site file, don't overwrite it; merge the tables by
+hand instead. Then open `~/.config/edarunner/site.toml` and adjust three
+things:
 
-- `[hosts.local]`: the cores and the RAM of this machine.
-- `scratch`: the roots where the run trees may go. The largest writable
-  one wins.
-- `env`: `EDR_SIF_DIR` names the directory of step 3. `EDR_RUNTIME`
-  picks `apptainer`, `singularity`, `docker` or `none`; without it
-  `croc/hooks/container.sh` takes the first one on `PATH`. Use `none`
-  for native tools.
+- Under `[hosts.local]`, enter the cores and RAM of your machine.
+- `scratch` lists the directories where run trees may go. edarunner picks
+  the largest writable one.
+- In `env`, `EDR_SIF_DIR` is the directory from step 3. You can also set
+  `EDR_RUNTIME` to `apptainer`, `singularity`, `docker` or `none`. If you
+  leave it out, `croc/hooks/container.sh` uses the first runtime it finds
+  on your `PATH`. Set it to `none` if you installed the tools natively.
 
-### 5. Check, plan, launch
+### 5. Check, plan and launch
 
 ```sh
 cd croc
-edr checkout v2.0.0          # prints b714f2d and the path of a worktree
-edr check                    # loads every file, probes the hosts
-edr plan synth               # the run id, the host and the run tree
-edr launch synth --dry-run   # every path and command; writes nothing
+edr checkout v2.0.0          # prints b714f2d and the path of a new worktree
+edr check                    # loads every file and probes the hosts
+edr plan synth               # shows the run id, the host and the run tree
+edr launch synth --dry-run   # prints every path and command, writes nothing
 edr launch synth
 ```
 
-`edr checkout` adds a detached worktree of Croc at `../rtl-wt/b714f2d`
-with its own clone of the PDK. Every run copies that tree, so a later
-change in `rtl/` never reaches a run that is in progress. Read every path
-of the dry run before the real launch.
+`edr checkout` creates a detached worktree of Croc at `../rtl-wt/b714f2d`
+with its own copy of the PDK. Each run works on a copy of that worktree,
+so whatever you change in `rtl/` later can't affect a run in progress.
+Read the paths in the dry run before you launch for real.
 
-### 6. Watch
+### 6. Watch the run
 
 ```sh
 edr status                   # the board
-edr status ihp13@synth       # one run: its stages, metrics and log tail
-edr watch --once             # collect the reports and extract the metrics
+edr status ihp13@synth       # one run, with its stages, metrics and log tail
+edr watch --once             # collects the reports and extracts the metrics
 ```
 
-`ihp13@synth` is a handle: the label of the job and the batch. The run
-writes a heartbeat once a minute, so `edr status` shows the stage and the
-last log lines. The synthesis takes about 4 min on eight cores. Run
-`edr watch --once` again after the run ends; that cycle collects the
-reports. For a watcher that stays up, start `edr watch` in `tmux`, or as
-the systemd unit that `edr init` writes.
+`ihp13@synth` is a handle, made of the job's label and the batch name. The
+run writes a heartbeat every minute, so `edr status` always shows the
+current stage and the last lines of the log. Synthesis takes about four
+minutes on eight cores. Once the run has finished, run `edr watch --once`
+one more time so that it collects the reports. If you want a watcher that
+keeps running, start `edr watch` in `tmux` or install the systemd unit
+that `edr init` writes.
 
-### 7. The whole flow
+### 7. Run the whole flow
 
 ```sh
 edr launch croc
 ```
 
-The batch runs `synth`, `floorplan`, `place`, `cts`, `route`,
-`finishing` and `drc` in order on one tree. It takes about 45 min on
-eight cores. The watcher adds the metrics of each stage when the stage
-ends.
+This batch runs `synth`, `floorplan`, `place`, `cts`, `route`, `finishing`
+and `drc` one after another on the same tree. It took about 45 minutes on
+eight cores in our tests, most of it in detailed routing. The watcher
+extracts each stage's metrics as soon as that stage ends.
 
 ### 8. Results and analysis
 
-Every number lives in one SQLite file, `data/edr.db`, and every number
-keeps the path of the report it came from. The design is the short hash
-of the Croc commit, because one table holds one design:
+All the numbers end up in a single SQLite file, `data/edr.db`, and each
+one remembers which report it came from. You always ask for one design at
+a time, identified by the short hash of the Croc commit:
 
 ```sh
 edr metrics --design b714f2d
 edr metrics --design b714f2d --csv > metrics.csv
 ```
 
-After the synthesis the table has one row: the cell area of `croc_chip`
-from the Yosys statistics, about 1 602 565 um2. The whole flow adds the
-utilization, the worst and the total negative slack after placement and
-on the finished layout, and the DRC count; `croc/README.md` lists each metric and
-its report.
+After synthesis there is one row: the cell area of `croc_chip` from the
+Yosys statistics, which comes to 1 602 565 um2. The whole flow adds the
+core utilization, the worst and total negative slack after placement and
+on the finished layout, and the DRC violation count. `croc/README.md`
+lists every metric together with the report it is read from.
 
-Each watcher cycle writes the board to `data/board/`. `compare.html` is
-one page with the runs and their parameters as columns, the final
-metrics side by side with the difference to a ticked run, and plots.
-`status.html` is the board at phone width. Open the files in a browser,
-or serve the directory:
+Every watcher cycle also writes a board to `data/board/`. `compare.html`
+puts the runs next to each other with their parameters as columns, shows
+how the final metrics differ from a run you tick, and draws a few plots.
+`status.html` is the same board sized for a phone. You can open both files
+directly in a browser or serve the directory:
 
 ```sh
 cd data/board && python3 -m http.server --bind 127.0.0.1 8000
 ```
 
-A report, a notebook or a paper reads a snapshot, not the live
-database:
+For a report, a notebook or a paper, export a snapshot instead of reading
+the live database:
 
 ```sh
 edr export --design b714f2d --out exports/b714f2d
 ```
 
-The snapshot holds `manifest.json` with the sha256 of every file,
-`runs.csv`, `metrics.csv`, and the collected reports of the newest run
-per label under `<label>/`. Copy it as it is into the analysis, and name
-the hash next to every number you quote.
+The snapshot contains `manifest.json` with a sha256 for every file,
+`runs.csv`, `metrics.csv`, and the collected reports of the newest run for
+each label, under `<label>/`. Copy the directory into your analysis as it
+is, and quote the hash next to every number you take from it.
 
 <!-- mlflow: filled after the analysis release -->
 
-With the Telegram bot of `site.toml` set up, the phone answers the same
-questions: `/metric area_cell_um2` gives one metric per run,
-`/compare <handle> <handle>` puts two runs side by side, `/csv b714f2d`
-sends `metrics.csv`, and `/board` sends the two pages as files.
+If you set up the Telegram bot in `site.toml`, you can ask the same
+questions from your phone. `/metric area_cell_um2` lists one metric for
+every run, `/compare <handle> <handle>` shows two runs side by side,
+`/csv b714f2d` sends the metrics as a CSV file, and `/board` sends both
+HTML pages.
+
+### 9. Let an agent operate the project
+
+The repository also shows how an LLM coding agent can run the project for
+you. Any agent that reads `AGENTS.md` gets the general part. The root
+`AGENTS.md` holds the rules for the whole repository, and `croc/AGENTS.md`
+says what the agent owns, reads and writes in the project, what it must
+never do, and how it drives `edr`: a briefing first, `--json` on every
+call, a dry run before anything that writes, and a reason with every stop
+or retire.
+
+Claude Code is the default agent here, and it gets three extras. Each
+`CLAUDE.md` is a single line that points it to the `AGENTS.md` next to
+it. `croc/.claude/settings.json` runs `edr brief` when a session starts,
+so the agent begins with the flow, the state and the runs that need a
+decision, and it sends a short note through `edr notify` after each turn.
+The skill in `croc/.claude/skills/edr-ops/` walks through the triage loop.
+`edr brief` needs edarunner 0.4.0 or newer; with an older version the hook
+falls back to `edr status --triage`. To reach a session from your phone,
+look at the `/claude` command that is commented out in `site/site.toml`.
+
+None of these files name a host, a user or a chat. Those belong in your
+lab's private site file, which stays out of this repository.
 
 ## Clean up
 
@@ -195,61 +225,63 @@ edr retire --batch synth --dry-run --why "walkthrough done"
 edr retire --batch synth --why "walkthrough done"
 ```
 
-`retire` deletes the run trees after a guard on each path, and refuses a
-tree whose results are not collected. The database, the collected
-reports and the snapshots stay on the head node.
+`retire` checks each path before it deletes a run tree, and it refuses to
+delete a tree whose results haven't been collected yet. The database, the
+collected reports and your snapshots all stay on the head node.
 
-## The lab path
+## Moving to a lab farm
 
-The same project runs on a farm. Only the site file changes.
+The same project runs on a farm of compute hosts. Only the site file
+changes.
 
-1. Give each compute host a `[hosts.<name>]` table in `site.toml`, with
-   its cores and RAM. The head node reaches each host over `ssh` with a
-   key and no prompt. A host needs `python3` 3.6 or newer, `rsync` and
-   the container runtime or the tools.
-2. Put the state directory, `~/.edr/croc` by default, on a filesystem
-   that every host mounts. The home directory often is one.
-3. Keep the site directory on a shared filesystem too, when a tool probe
-   or a hook runs on the hosts.
-4. List the tools of a host under `tools` when not every host has every
-   tool. `edr plan` then places a stage only on a host that has its tools.
-5. Set `EDR_RUNTIME` in the site `env` to the way your hosts run an
-   image. A site wrapper can take the place of a runtime: at ETH Zurich,
-   `oseda -<version>` runs the IIC-OSIC-TOOLS image, and
-   `container.sh` calls it when it is on `PATH`.
-6. Delete `host` from the jobs, or set it to `auto`. `edr launch` then
-   picks the host with the most free cores that fits the first stage.
+1. Add a `[hosts.<name>]` table for each compute host in `site.toml`, with
+   its cores and RAM. The head node has to reach every host over `ssh` with
+   a key and without a password prompt. Each host needs `python3` 3.6 or
+   newer, `rsync`, and either the container runtime or the tools.
+2. Put the state directory (`~/.edr/croc` by default) on a filesystem that
+   every host mounts. A shared home directory works well.
+3. If a tool probe or a hook has to run on the hosts, keep the site
+   directory on a shared filesystem as well.
+4. If some hosts lack a tool, list the tools each host does have under
+   `tools`. `edr plan` then only places a stage on a host that can run it.
+5. Set `EDR_RUNTIME` in the site's `env` to match how your hosts run an
+   image. A site's own wrapper works too. At ETH Zurich, for example,
+   `oseda -<version>` starts the IIC-OSIC-TOOLS image, and `container.sh`
+   uses it whenever it is on the `PATH`.
+6. Remove `host` from the jobs or set it to `auto`. `edr launch` will then
+   choose the host with the most free cores that can take the first stage.
 
-`edr hosts` shows the load of every host, and `edr check` names each host
-that does not answer.
+`edr hosts` shows how busy each host is, and `edr check` tells you which
+hosts don't answer.
 
-## Read more
+## Further reading
 
-The edarunner documentation is at <https://lionnus.github.io/edarunner/>:
+The edarunner documentation lives at <https://lionnus.github.io/edarunner/>.
 
-| Page | Read it to |
+| Page | What you'll find there |
 |---|---|
-| [install](https://lionnus.github.io/edarunner/install/) | install `edr` and see what a compute host needs |
-| [concepts](https://lionnus.github.io/edarunner/concepts/) | know what a project, a stage, a run, a batch and a snapshot are |
-| [configure](https://lionnus.github.io/edarunner/configure/) | turn your own flow into a project like `croc/` |
-| [run](https://lionnus.github.io/edarunner/run/) | launch, watch, resume, and clear the hosts |
-| [results](https://lionnus.github.io/edarunner/results/) | the database, the compare board and the snapshot |
-| [telegram](https://lionnus.github.io/edarunner/telegram/) | the bot, from BotFather to the phone commands |
-| [guarantees](https://lionnus.github.io/edarunner/guarantees/) | what `edr` never does, and what a dry run and a guard promise |
+| [install](https://lionnus.github.io/edarunner/install/) | how to install `edr` and what a compute host needs |
+| [concepts](https://lionnus.github.io/edarunner/concepts/) | what a project, a stage, a run, a batch and a snapshot are |
+| [configure](https://lionnus.github.io/edarunner/configure/) | how to turn your own flow into a project like `croc/` |
+| [run](https://lionnus.github.io/edarunner/run/) | launching, watching, resuming and clearing the hosts |
+| [results](https://lionnus.github.io/edarunner/results/) | the database, the compare board and snapshots |
+| [telegram](https://lionnus.github.io/edarunner/telegram/) | setting up the bot and using it from a phone |
+| [guarantees](https://lionnus.github.io/edarunner/guarantees/) | what `edr` never does, and what dry runs and guards promise |
 | [reference](https://lionnus.github.io/edarunner/reference/) | every command, flag, config key, placeholder and run state |
 
 ## Known limitations
 
-- The `docker` branch of `container.sh` is not tested; the IIC-OSIC-TOOLS
-  image runs in CI through the `container` key of the workflow instead.
-- The DRC stage runs the BEOL rules of the IHP deck only; `croc/README.md`
-  says why. The count is not a signoff result.
-- In edarunner 0.3.0, `edr retire --batch` refuses the last batch on a
-  commit. It also removes the worktree `../rtl-wt/<hash>`, and that path
-  lacks the safety marker `/edr/`. Retire such a run by its handle, as in
-  `edr retire ihp13@croc --why "done"`.
+- The `docker` branch of `container.sh` hasn't been tested. In CI the
+  image runs through the workflow's `container` key instead.
+- The DRC stage only checks the BEOL rules of the IHP deck, for reasons
+  given in `croc/README.md`. Its count is not a signoff result.
+- In edarunner 0.3.0, `edr retire --batch` refuses to retire the last
+  batch on a commit. It tries to remove the worktree `../rtl-wt/<hash>` as
+  well, and that path doesn't contain the safety marker `/edr/`. Until
+  this is fixed, retire those runs one by one with their handles, for
+  example `edr retire ihp13@croc --why "done"`.
 
 ## License
 
-Apache-2.0 for the files of this repository; see `LICENSE`. Croc, the IHP
-PDK and the tools carry their own licences.
+The files in this repository are under the Apache-2.0 license (see
+`LICENSE`). Croc, the IHP PDK and the tools have their own licences.

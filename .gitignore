@@ -5,3 +5,6 @@
 croc/data/
 croc/exports/
 croc/edr-watch.service
+# The agent contracts and the Claude Code settings belong to the example.
+!CLAUDE.md
+!.claude/
