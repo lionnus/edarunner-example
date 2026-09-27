@@ -1,0 +1,150 @@
+# The Croc SoC (github.com/pulp-platform/croc) through Yosys, OpenROAD and KLayout on
+# IHP SG13G2. One stage per flow script call, since each call ends one tool session and
+# leaves a checkpoint. No licence. croc/README.md explains every part.
+schema = 1
+project = "croc"
+site = "~/.config/edarunner/site.toml"
+
+# The Croc clone sits next to this directory; `edr checkout` adds one worktree per commit.
+# The PDK is a submodule, so each worktree gets its own clone of it.
+[source]
+repo = "../rtl"
+worktrees = "../rtl-wt"
+ref = "HEAD"
+nested = ["ihp13/pdk"]
+
+# Every stage calls hooks/container.sh, so the same file serves native tools, a container
+# runtime and a site wrapper. The site env sets EDR_RUNTIME; this is the image the flow
+# scripts were written for.
+[env]
+EDR_CONTAINER = "hpretl/iic-osic-tools:2025.12"
+
+# A host other than the head node may not see this directory, so the hook travels with
+# the tree.
+[sync]
+exclude = [".git", "artistic"]
+after = "if [ {host} = local ]; then d={root}/.edr/; else d={host}:{root}/.edr/; fi; rsync -a hooks/container.sh $d"
+
+[limits]
+stagger_s = 0
+host_free_min_gb = 10
+
+[placement]
+max_per_host = 2
+min_free_cores = 2
+min_free_ram_gb = 8
+
+# The flow scripts pipe the tool through gawk and do not set pipefail, so a tool that
+# fails still exits 0. Each stage tests for its checkpoint.
+[stages.synth]
+cwd = "yosys"
+cmd = "bash {root}/.edr/container.sh ./run_synthesis.sh --synth && test -s out/croc_yosys.v"
+needs = { cores = 2, disk_gb = 5, tools = ["yosys"] }
+budget = { hours = 1 }
+collect = ["yosys/reports/", "yosys/croc.log"]
+collect_on_request = { netlist = ["yosys/out/"] }
+
+[stages.floorplan]
+cwd = "openroad"
+cmd = "bash {root}/.edr/container.sh ./run_backend.sh --floorplan && test -s save/01_croc.floorplan.zip"
+needs = { cores = 2, disk_gb = 5, tools = ["openroad"] }
+budget = { hours = 0.5 }
+collect = ["openroad/reports/", "openroad/logs/"]
+
+[stages.place]
+cwd = "openroad"
+cmd = "bash {root}/.edr/container.sh ./run_backend.sh --placement && test -s save/02_croc.placed.zip"
+needs = { cores = 8, disk_gb = 5, tools = ["openroad"] }
+budget = { hours = 2 }
+collect = ["openroad/reports/", "openroad/logs/"]
+
+[stages.cts]
+cwd = "openroad"
+cmd = "bash {root}/.edr/container.sh ./run_backend.sh --cts && test -s save/03_croc.cts.zip"
+needs = { cores = 8, disk_gb = 5, tools = ["openroad"] }
+budget = { hours = 2 }
+collect = ["openroad/reports/", "openroad/logs/"]
+
+[stages.route]
+cwd = "openroad"
+cmd = "bash {root}/.edr/container.sh ./run_backend.sh --routing && test -s save/04_croc.routed.zip"
+needs = { cores = 8, disk_gb = 10, tools = ["openroad"] }
+budget = { hours = 4 }
+collect = ["openroad/reports/", "openroad/logs/"]
+
+# OpenROAD writes the DEF, then KLayout streams it to GDS.
+[stages.finishing]
+cwd = "openroad"
+cmd = "bash {root}/.edr/container.sh ./run_backend.sh --finishing && test -s out/croc.def && cd ../klayout && bash {root}/.edr/container.sh ./run_finishing.sh --gds && test -s out/croc.gds.gz"
+needs = { cores = 2, disk_gb = 5, tools = ["openroad", "klayout"] }
+budget = { hours = 1 }
+collect = ["openroad/reports/", "openroad/logs/", "klayout/out/def2stream.log"]
+collect_on_request = { layout = ["openroad/out/", "klayout/out/"] }
+
+# The BEOL rules of the IHP deck: the standard cells come DRC clean, and the flow draws
+# the metal. The FEOL, density and extra rules take hours on the whole chip, and the
+# flow adds no fill before this stage. The deck exits 1 on a violation, so the stage
+# passes when it wrote its report database.
+[stages.drc]
+cwd = "klayout"
+cmd = "rm -rf drc && bash {root}/.edr/container.sh python3 ../ihp13/pdk/ihp-sg13g2/libs.tech/klayout/tech/drc/run_drc.py --path=out/croc.gds.gz --topcell=croc_chip --run_dir=drc --mp={cores} --no_feol --no_density --disable_extra_rules; mv drc/croc.gds_croc_chip_*.lyrdb drc/croc.lyrdb"
+needs = { cores = 8, disk_gb = 5, tools = ["klayout"] }
+budget = { hours = 2 }
+collect = ["klayout/drc/"]
+
+[metrics.area_cell_um2]
+stage = "synth"
+file = "yosys/reports/croc_area.rpt"
+regex = 'Chip area for top module \S+:\s+([0-9.]+)'
+unit = "um2"
+canonical = "area.cell"
+
+# The OpenROAD reports of each stage end with the same sections, so one pattern reads
+# a number after placement and after finishing.
+[metrics.util_core_place]
+stage = "place"
+file = "openroad/reports/02_croc.placed.rpt"
+regex = 'Core Utilization:\s+([0-9.]+)'
+unit = "fraction"
+canonical = "util.core"
+
+[metrics.wns_place_ns]
+stage = "place"
+file = "openroad/reports/02_croc.placed.rpt"
+regex = 'wns max\s+(-?[0-9.]+)'
+unit = "ns"
+canonical = "timing.wns"
+
+[metrics.tns_place_ns]
+stage = "place"
+file = "openroad/reports/02_croc.placed.rpt"
+regex = 'tns max\s+(-?[0-9.]+)'
+unit = "ns"
+canonical = "timing.tns"
+
+[metrics.util_core_final]
+stage = "finishing"
+file = "openroad/reports/05_croc.final.rpt"
+regex = 'Core Utilization:\s+([0-9.]+)'
+unit = "fraction"
+canonical = "util.core"
+
+[metrics.wns_final_ns]
+stage = "finishing"
+file = "openroad/reports/05_croc.final.rpt"
+regex = 'wns max\s+(-?[0-9.]+)'
+unit = "ns"
+canonical = "timing.wns"
+
+[metrics.tns_final_ns]
+stage = "finishing"
+file = "openroad/reports/05_croc.final.rpt"
+regex = 'tns max\s+(-?[0-9.]+)'
+unit = "ns"
+canonical = "timing.tns"
+
+[metrics.drc_violations]
+stage = "drc"
+file = "klayout/drc/croc.lyrdb"
+python = "python:hooks/drc_count.py:count"
+canonical = "drc.count"

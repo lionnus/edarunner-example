@@ -1,0 +1,8 @@
+# Synthesis alone: the first batch of the walkthrough and the CI check, about 10 min.
+batch = "synth"
+source = "v2.0.0"
+
+[[job]]
+label = "ihp13"
+config = "croc_chip"
+stages = ["synth"]
