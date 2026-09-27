@@ -1,0 +1,7 @@
+# The Croc clone and its worktrees, next to the project as in the walkthrough.
+/rtl/
+/rtl-wt/
+# What edr writes into the project: the run database, results, board and exports.
+croc/data/
+croc/exports/
+croc/edr-watch.service
