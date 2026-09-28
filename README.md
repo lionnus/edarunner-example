@@ -12,7 +12,7 @@ the lab shares, and the project where you run `edr`.
 
 ```
 site/                    a lab's site repository; each user clones it to ~/.config/edarunner/
-  site.toml              hosts, scratch, tools, marks, and the bot (commented out)
+  site.toml              hosts, scratch, tools, and the bot (commented out)
   hooks/flexlm_free.sh   seat probe for a FlexLM licence feature
   hooks/machine_check.sh free cores, RAM and scratch on each host
 croc/                    a project directory, as it sits where you run edr
@@ -105,7 +105,10 @@ already have a site file, don't overwrite it; merge the tables by hand
 instead. Then open `~/.config/edarunner/site.toml` and adjust three
 things:
 
-- Under `[hosts.local]`, enter the cores and RAM of your machine.
+- Under `[hosts.local]`, enter the cores and RAM of your machine. No run
+  starts while the scratch has less than `host_free_min_gb` free. The
+  default is 100 GB, and the example sets 10 so that the walkthrough fits
+  on a small disk.
 - `scratch` lists the directories where run trees may go. edarunner picks
   the largest writable one.
 - In `env`, `EDR_SIF_DIR` is the directory from step 3. You can also set

@@ -1,4 +1,4 @@
-# A lab's site file: its hosts, scratch space, tools, marks and bot. Copy this whole
+# A lab's site file: its hosts, scratch space, tools and bot. Copy this whole
 # directory to ~/.config/edarunner/ so that the hooks are found at {site_dir}/hooks.
 # Every host, server and path below is a placeholder. A lab keeps its real copy in a
 # private repository, because that file names its machines.
@@ -19,9 +19,12 @@ ssh = { options = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10"], timeout_s 
 tool_procs = "^(yosys|openroad|klayout)$"
 
 # The head node itself, which edr reaches without ssh. Enter its real cores and RAM.
+# No run starts on a host whose scratch has less than host_free_min_gb free. The default
+# is 100 GB, and 10 lets the walkthrough run on a small disk.
 [hosts.local]
 cores = 4
 ram_gb = 16
+host_free_min_gb = 10
 
 # Two compute hosts, reached over ssh with a key and without a password prompt. Remove
 # the comment marks and enter the real names; `edr check` will then probe each one.
@@ -47,12 +50,6 @@ ram_gb = 16
 # [tools.fc]
 # seats = 20
 # probe = ["bash", "{site_dir}/hooks/flexlm_free.sh", "27000@licence.example.com", "FEATURE-NAME"]
-
-# `edr hosts` marks a resource yellow, orange and red once its use reaches these fractions.
-[marks]
-cores = [0.6, 0.8, 0.9]
-ram = [0.6, 0.8, 0.9]
-scratch = [0.7, 0.85, 0.95]
 
 # To get alerts, a pinned board and commands on your phone, set up a Telegram bot:
 # 1. Send /newbot to @BotFather on Telegram and copy the token it gives you.
