@@ -247,10 +247,13 @@ the live database:
 edr export --source b714f2d --out exports/b714f2d
 ```
 
-The snapshot contains `manifest.json` with a sha256 for every file,
-`runs.csv`, `metrics.csv`, and the collected reports of the newest run for
-each label, under `<label>/`. Copy the directory into your analysis as it
-is, and quote the hash next to every number you take from it.
+The snapshot holds tables: `runs.csv`, `metrics.csv`, `parameters.csv`,
+`instances.csv`, `task_fields.csv`, `flags.csv` and `manifest.json`. It takes
+one run per label, the newest one that ended done, and the manifest lists
+the runs it skipped and the ones that did not finish. Add `--files` to copy
+the reports that the numbers came from, under `<run_id>/`. Copy the
+directory into your analysis as it is, and quote the hash next to every
+number you take from it.
 
 If you prefer MLflow, edarunner can also write the database into a
 local MLflow tracking store, which `mlflow ui` then opens. The export
