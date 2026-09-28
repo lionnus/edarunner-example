@@ -13,6 +13,7 @@ the lab shares, and the project where you run `edr`.
 ```
 site/                    a lab's site repository; each user clones it to ~/.config/edarunner/
   site.toml              hosts, scratch, tools, and the bot (commented out)
+  .gitignore             keeps each user's user.toml and secret files out of git
   hooks/flexlm_free.sh   seat probe for a FlexLM licence feature
   hooks/machine_check.sh free cores, RAM and scratch on each host
 croc/                    a project directory, as it sits where you run edr

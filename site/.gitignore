@@ -1,0 +1,4 @@
+# Each user's user.toml and secret files stay out of the lab's repository.
+user.toml
+*.token
+*.password
