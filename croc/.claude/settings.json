@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cd \"$CLAUDE_PROJECT_DIR\" && (edr brief 2>/dev/null || edr status --triage)"
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && edr brief"
           }
         ]
       }
