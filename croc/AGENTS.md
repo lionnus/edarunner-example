@@ -21,7 +21,7 @@ database, the collected results and the board.
 ## Writes
 
 It writes new batches into `jobs/` and makes snapshots with
-`edr export --design <hash> --out exports/<hash>`. Every stop and retire
+`edr export --source <hash> --out exports/<hash>`. Every stop and retire
 carries a `--why`, so that `edr events` keeps the record.
 
 ## Never
@@ -55,6 +55,6 @@ manifest. Requests for the site go into `data/handoff/croc_to_site.md`.
 5. When a long task ends or needs a person, report it with
    `edr notify "<text>"`.
 
-The design is the short hash of the Croc commit, `b714f2d` for `v2.0.0`.
-Pass it to `edr metrics --design` and `edr export --design`, and quote it
-next to every number you report.
+The source tag is the short hash of the Croc commit, `b714f2d` for
+`v2.0.0`. Pass it to `edr metrics --source` and `edr export --source`, and
+quote it next to every number you report.

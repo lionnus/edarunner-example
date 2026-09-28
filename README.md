@@ -215,12 +215,13 @@ extracts each stage's metrics as soon as that stage ends.
 ### 9. Results and analysis
 
 All the numbers end up in a single SQLite file, `data/edr.db`, and each
-one remembers which report it came from. You always ask for one design at
-a time, identified by the short hash of the Croc commit:
+one remembers which report it came from. You always ask for one source at
+a time, named by its source tag: the short hash of the Croc commit that
+`edr checkout` printed.
 
 ```sh
-edr metrics --design b714f2d
-edr metrics --design b714f2d --csv > metrics.csv
+edr metrics --source b714f2d
+edr metrics --source b714f2d --csv > metrics.csv
 ```
 
 After synthesis there is one row: the cell area of `croc_chip` from the
@@ -243,7 +244,7 @@ For a report, a notebook or a paper, export a snapshot instead of reading
 the live database:
 
 ```sh
-edr export --design b714f2d --out exports/b714f2d
+edr export --source b714f2d --out exports/b714f2d
 ```
 
 The snapshot contains `manifest.json` with a sha256 for every file,
@@ -257,7 +258,7 @@ needs the `mlflow` extra of edarunner:
 
 ```sh
 uv tool install 'edarunner[mlflow] @ git+https://github.com/lionnus/edarunner'
-edr export --mlflow exports/mlflow --design b714f2d
+edr export --mlflow exports/mlflow --source b714f2d
 uvx mlflow ui --backend-store-uri sqlite:///exports/mlflow/mlflow.db --host 127.0.0.1 --port 5000
 ```
 
