@@ -7,15 +7,15 @@ the RTL to a GDS file and a DRC report. Every tool is open source, so you
 don't need a licence to try it.
 
 It bundles a site file and a project so that you can read both in one
-place. A lab keeps the site file on its head
-node and the project config inside the repository of the flow it drives.
+place. In a lab the two live apart: the site file in a repository that
+the lab shares, and the project where you run `edr`.
 
 ```
-site/                    the site template; you copy it to ~/.config/edarunner/
+site/                    a lab's site repository; each user clones it to ~/.config/edarunner/
   site.toml              hosts, scratch, tools, marks, and the bot (commented out)
   hooks/flexlm_free.sh   seat probe for a FlexLM licence feature
   hooks/machine_check.sh free cores, RAM and scratch on each host
-croc/                    the flow project
+croc/                    a project directory, as it sits where you run edr
   edr.toml               seven stages from synth to drc, plus the metrics
   jobs/synth.toml        synthesis only, for a first quick batch
   jobs/croc.toml         the whole flow
@@ -27,15 +27,18 @@ AGENTS.md, CLAUDE.md     the rules for agents in the whole repository
 .github/workflows/ci.yml the walkthrough below, run in CI
 ```
 
-`site/` shows what a lab's site file looks like. It lists the lab's
-machines, licence servers and chat, so a lab keeps its own copy private,
-at most in a repository of its own, and never in a public project like
-this one. `croc/` is the project. It describes the flow but names no
-machine, which is why the same files run unchanged in any lab. In a lab it
-would be an `edr/` directory inside the flow's repository, and
-`croc/README.md` says what changes then. A new lab copies `site/` once and
-fills in its hosts. A new project starts from `croc/` and changes the
-stages and the metrics.
+`site/` has the shape of a lab's site repository. Every project and every
+user of the lab's machines shares the site file, so the lab keeps it in a
+private repository of its own, and each user clones that repository to
+`~/.config/edarunner/`. It lists the lab's machines, licence servers and
+chat, so it never goes into a public project like this one. A new lab
+copies `site/` once into such a repository and fills in its hosts.
+
+`croc/` is a project directory as it sits where you run `edr`, next to the
+checkouts of the flow. It describes the flow but names no machine, which
+is why the same files run unchanged in any lab. Whether a project
+directory goes into git is up to the project. A new project starts from
+`croc/` and changes the stages and the metrics.
 
 ## What you need
 
@@ -97,8 +100,9 @@ mkdir -p ~/.config/edarunner
 cp -r site/. ~/.config/edarunner/
 ```
 
-If you already have a site file, don't overwrite it; merge the tables by
-hand instead. Then open `~/.config/edarunner/site.toml` and adjust three
+Here the copy stands in for the clone of a lab's site repository. If you
+already have a site file, don't overwrite it; merge the tables by hand
+instead. Then open `~/.config/edarunner/site.toml` and adjust three
 things:
 
 - Under `[hosts.local]`, enter the cores and RAM of your machine.

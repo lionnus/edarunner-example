@@ -17,12 +17,11 @@ edarunner-example/
 ```
 
 In `edr.toml`, `source.repo` points at `../rtl` and `source.worktrees` at
-`../rtl-wt`. This example keeps the project beside the clone so that one
-repository can hold both the site file and the project. In a lab, the
-project lives as an `edr/` directory inside the repository of the flow,
-with `data/` ignored by git. Croc's flow scripts are part of Croc, so
-that directory would be `rtl/edr/`, with `source.repo = ".."` and
-`source.worktrees = "../../rtl-wt"`.
+`../rtl-wt`. A project in a lab has the same layout: the project directory
+sits where you run `edr`, next to the checkouts of the flow, and the site
+file comes from the lab's site repository, cloned to
+`~/.config/edarunner/`. Whether the project directory goes into git is up
+to the project.
 
 ## Stages
 
