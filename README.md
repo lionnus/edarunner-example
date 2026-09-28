@@ -1,13 +1,13 @@
 # edarunner-example
 
-This repository is a complete, working [edarunner](https://github.com/lionnus/edarunner)
+This repository holds a working [edarunner](https://github.com/lionnus/edarunner)
 setup. It runs the open-source [Croc SoC](https://github.com/pulp-platform/croc)
 through Yosys, OpenROAD and KLayout on the IHP SG13G2 PDK, all the way from
 the RTL to a GDS file and a DRC report. Every tool is open source, so you
 don't need a licence to try it.
 
-The repository is a showcase that bundles a site file and a project, so
-you can read both in one place. A lab keeps the site file on its head
+It bundles a site file and a project so that you can read both in one
+place. A lab keeps the site file on its head
 node and the project config inside the repository of the flow it drives.
 
 ```
@@ -123,8 +123,8 @@ edr launch synth
 `edr checkout` makes a local clone of Croc at `../rtl-wt/b714f2d`,
 detached at that commit, with its own copy of the PDK. Each run works on
 a copy of that clone, so whatever you change in `rtl/` later can't affect
-a run in progress.
-Read the paths in the dry run before you launch for real.
+a run in progress. Read the paths in the dry run before you launch for
+real.
 
 ### 6. Watch the run
 
@@ -278,12 +278,12 @@ The edarunner documentation lives at <https://lionnus.github.io/edarunner/>.
 | Page | What you'll find there |
 |---|---|
 | [install](https://lionnus.github.io/edarunner/install/) | how to install `edr` and what a compute host needs |
-| [concepts](https://lionnus.github.io/edarunner/concepts/) | what a project, a stage, a run, a batch and a snapshot are |
-| [configure](https://lionnus.github.io/edarunner/configure/) | how to turn your own flow into a project like `croc/` |
-| [run](https://lionnus.github.io/edarunner/run/) | launching, watching, resuming and clearing the hosts |
-| [results](https://lionnus.github.io/edarunner/results/) | the database, the compare board and snapshots |
-| [telegram](https://lionnus.github.io/edarunner/telegram/) | setting up the bot and using it from a phone |
-| [guarantees](https://lionnus.github.io/edarunner/guarantees/) | what `edr` never does, and what dry runs and guards promise |
+| [how it works](https://lionnus.github.io/edarunner/how-it-works/) | what a project, a stage, a run and a batch are, and what `edr` never does |
+| [project](https://lionnus.github.io/edarunner/guides/project/) | how to turn your own flow into a project like `croc/` |
+| [run](https://lionnus.github.io/edarunner/guides/run/) | how to launch, watch and resume runs |
+| [results](https://lionnus.github.io/edarunner/guides/results/) | the database, the compare board and snapshots |
+| [alerts](https://lionnus.github.io/edarunner/guides/alerts/) | how to set up the bot and use it from a phone |
+| [cleanup](https://lionnus.github.io/edarunner/guides/cleanup/) | how to retire runs and clear the hosts |
 | [reference](https://lionnus.github.io/edarunner/reference/) | every command, flag, config key, placeholder and run state |
 
 ## Known limitations

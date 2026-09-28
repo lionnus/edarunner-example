@@ -111,10 +111,8 @@ following values, and they were the same on every host we tried:
 
 ## Batches
 
-| File | Jobs |
-|---|---|
-| `jobs/synth.toml` | `ihp13`, running only the `synth` stage |
-| `jobs/croc.toml` | `ihp13`, running every stage |
+Both batches hold one job, `ihp13`. In `jobs/synth.toml` it runs only the
+`synth` stage, and in `jobs/croc.toml` it runs every stage.
 
 Croc `v2.0.0` has one publicly available PDK, IHP SG13G2 from the
 submodule. Its `env.sh` also accepts a `technology/` directory generated
