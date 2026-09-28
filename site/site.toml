@@ -1,7 +1,8 @@
-# A lab's site file: its hosts, scratch space, tools and bot. Copy this whole
+# A lab's site file: its hosts, scratch space, tools and bot commands. Copy this whole
 # directory to ~/.config/edarunner/ so that the hooks are found at {site_dir}/hooks.
 # Every host, server and path below is a placeholder. A lab keeps its real copy in a
-# private repository, because that file names its machines.
+# private repository, because that file names its machines. Each user's chat and bot
+# token go into user.toml next to this file, and .gitignore keeps them out of git.
 schema = 1
 
 # On each host, run trees go into the largest writable directory in this list.
@@ -51,19 +52,10 @@ host_free_min_gb = 10
 # seats = 20
 # probe = ["bash", "{site_dir}/hooks/flexlm_free.sh", "27000@licence.example.com", "FEATURE-NAME"]
 
-# To get alerts, a pinned board and commands on your phone, set up a Telegram bot:
-# 1. Send /newbot to @BotFather on Telegram and copy the token it gives you.
-# 2. Save the token in ~/.config/edarunner/telegram.token and chmod it to 600.
-# 3. Leave chat_id at 0, send the bot a message, and run `edr watch --once` in a
-#    project. The watcher prints the id of the chat that the message came from.
-# 4. Put that id into chat_id, and your own Telegram user id into user_id.
-# [telegram]
-# token_file = "~/.config/edarunner/telegram.token"
-# chat_id = 0
-# user_id = 0
-#
-# A custom command runs a program on the head node. With this one, /survey prints the
-# host table.
+# Each user sets up a Telegram bot of their own in user.toml, with its token, chat and
+# user id; README.md shows how. The site file holds only the lab's bot commands, which
+# every user's bot offers. A command runs a program on the head node. With this one,
+# /survey prints the host table.
 # [telegram.commands.survey]
 # help = "free cores, RAM and scratch on every host"
 # run = ["bash", "{site_dir}/hooks/machine_check.sh", "-c", "16", "-g", "80"]

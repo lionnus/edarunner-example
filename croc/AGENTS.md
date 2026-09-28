@@ -29,7 +29,8 @@ carries a `--why`, so that `edr events` keeps the record.
 It never kills a process by name or pattern, deletes anything without a
 dry run first, or retires a run tree whose results haven't been
 collected. It never writes a host, a server, a user or a chat id into a
-file of this repository; those belong in the lab's private site file.
+file of this repository. Hosts and servers belong in the lab's private
+site file, and a chat id in each user's own `user.toml`.
 
 ## Hands off through
 

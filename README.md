@@ -12,7 +12,7 @@ the lab shares, and the project where you run `edr`.
 
 ```
 site/                    a lab's site repository; each user clones it to ~/.config/edarunner/
-  site.toml              hosts, scratch, tools, and the bot (commented out)
+  site.toml              hosts, scratch, tools, and the lab's bot commands (commented out)
   .gitignore             keeps each user's user.toml and secret files out of git
   hooks/flexlm_free.sh   seat probe for a FlexLM licence feature
   hooks/machine_check.sh free cores, RAM and scratch on each host
@@ -31,9 +31,11 @@ AGENTS.md, CLAUDE.md     the rules for agents in the whole repository
 `site/` has the shape of a lab's site repository. Every project and every
 user of the lab's machines shares the site file, so the lab keeps it in a
 private repository of its own, and each user clones that repository to
-`~/.config/edarunner/`. It lists the lab's machines, licence servers and
-chat, so it never goes into a public project like this one. A new lab
-copies `site/` once into such a repository and fills in its hosts.
+`~/.config/edarunner/`. It lists the lab's machines and licence servers,
+so it never goes into a public project like this one. Each user's chat
+and bot token go into a `user.toml` next to the site file, which the
+repository's `.gitignore` keeps out of git. A new lab copies `site/` once
+into such a repository and fills in its hosts.
 
 `croc/` is a project directory as it sits where you run `edr`, next to the
 checkouts of the flow. It describes the flow but names no machine, which
@@ -146,11 +148,60 @@ edr watch --once             # collects the reports and extracts the metrics
 run writes a heartbeat every minute, so `edr status` always shows the
 current stage and the last lines of the log. Synthesis takes about four
 minutes on eight cores. Once the run has finished, run `edr watch --once`
-one more time so that it collects the reports. If you want a watcher that
-keeps running, start `edr watch` in `tmux` or install the systemd unit
-that `edr init` writes.
+one more time so that it collects the reports.
 
-### 7. Run the whole flow
+For a watcher that keeps running, each user runs one supervisor,
+`edr serve`, which keeps a watcher for every registered project.
+`edr launch` has registered this project already, and `edr register` in a
+project directory does the same by hand. Install the supervisor as a
+systemd user service:
+
+```sh
+mkdir -p ~/.config/systemd/user
+edr serve --unit > ~/.config/systemd/user/edr-serve.service
+systemctl --user daemon-reload
+systemctl --user enable --now edr-serve
+```
+
+From then on the supervisor collects the results for you, and
+`edr watch --once` exits with code 2, since the project already has a
+watcher. The
+[run](https://lionnus.github.io/edarunner/guides/run/#keep-a-watcher-behind-the-batch)
+guide explains the unit, and
+[projects](https://lionnus.github.io/edarunner/guides/projects/) shows one
+supervisor for several projects.
+
+### 7. Get alerts on your phone
+
+This step is optional and needs the supervisor from step 6, which also
+runs a Telegram bot. The bot sends an alert when a run needs you, keeps a
+pinned board and answers commands. The bot and its chat belong to you,
+not to the lab, so they go into `~/.config/edarunner/user.toml`, next to
+the site file. Make a bot with `/newbot` at @BotFather and save the token
+it gives you with mode 600:
+
+```sh
+umask 077; echo '<token>' > ~/.config/edarunner/telegram.token
+```
+
+Then write `~/.config/edarunner/user.toml`:
+
+```toml
+[telegram]
+token_file = "~/.config/edarunner/telegram.token"
+chat_id = 0   # the one chat the bot answers
+user_id = 0   # your Telegram user id; the bot then obeys only you
+```
+
+Leave `chat_id` at 0, send the bot a message, and restart the supervisor
+with `systemctl --user restart edr-serve`. It logs the id of the chat
+that the message came from, which `journalctl --user -u edr-serve` shows.
+Enter that id as `chat_id` and restart the supervisor again. A bot such
+as @userinfobot tells you your user id. The
+[alerts](https://lionnus.github.io/edarunner/guides/alerts/) guide
+describes the rest of `user.toml`: ntfy, mail and the daily digest.
+
+### 8. Run the whole flow
 
 ```sh
 edr launch croc
@@ -161,7 +212,7 @@ and `drc` one after another on the same tree. It took about 45 minutes on
 eight cores in our tests, most of it in detailed routing. The watcher
 extracts each stage's metrics as soon as that stage ends.
 
-### 8. Results and analysis
+### 9. Results and analysis
 
 All the numbers end up in a single SQLite file, `data/edr.db`, and each
 one remembers which report it came from. You always ask for one design at
@@ -214,13 +265,12 @@ Each run becomes one MLflow run, with its parameters, its metrics at each
 step and the stage times. Running the export again after the next batch
 adds only the new runs.
 
-If you set up the Telegram bot in `site.toml`, you can ask the same
-questions from your phone. `/metric area_cell_um2` lists one metric for
-every run, `/compare <handle> <handle>` shows two runs side by side,
-`/csv b714f2d` sends the metrics as a CSV file, and `/board` sends both
-HTML pages.
+If you set up the bot in step 7, you can ask the same questions from
+your phone. `/metric area_cell_um2` lists one metric for every run,
+`/compare <handle> <handle>` shows two runs side by side, `/csv b714f2d`
+sends the metrics as a CSV file, and `/board` sends both HTML pages.
 
-### 9. Let an agent operate the project
+### 10. Let an agent operate the project
 
 The repository also shows how an LLM coding agent can run the project for
 you. Any agent that reads `AGENTS.md` gets the general part. The root
@@ -240,8 +290,9 @@ The skill in `croc/.claude/skills/edr-ops/` walks through the triage loop.
 falls back to `edr status --triage`. To reach a session from your phone,
 look at the `/claude` command that is commented out in `site/site.toml`.
 
-None of these files name a host, a user or a chat. Those belong in your
-lab's private site file, which stays out of this repository.
+None of these files name a host, a user or a chat. The hosts belong in
+your lab's private site file and the chat in your own `user.toml`, and
+neither goes into this repository.
 
 ## Clean up
 
@@ -287,8 +338,10 @@ The edarunner documentation lives at <https://lionnus.github.io/edarunner/>.
 |---|---|
 | [install](https://lionnus.github.io/edarunner/install/) | how to install `edr` and what a compute host needs |
 | [how it works](https://lionnus.github.io/edarunner/how-it-works/) | what a project, a stage, a run and a batch are, and what `edr` never does |
+| [site](https://lionnus.github.io/edarunner/guides/site/) | how to describe the hosts, the tools and their licence seats |
 | [project](https://lionnus.github.io/edarunner/guides/project/) | how to turn your own flow into a project like `croc/` |
 | [run](https://lionnus.github.io/edarunner/guides/run/) | how to launch, watch and resume runs |
+| [projects](https://lionnus.github.io/edarunner/guides/projects/) | how one supervisor watches several projects |
 | [results](https://lionnus.github.io/edarunner/guides/results/) | the database, the compare board and snapshots |
 | [alerts](https://lionnus.github.io/edarunner/guides/alerts/) | how to set up the bot and use it from a phone |
 | [cleanup](https://lionnus.github.io/edarunner/guides/cleanup/) | how to retire runs and clear the hosts |
