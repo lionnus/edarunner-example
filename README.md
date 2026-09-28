@@ -319,8 +319,9 @@ changes.
    its cores and RAM. The head node has to reach every host over `ssh` with
    a key and without a password prompt. Each host needs `python3` 3.6 or
    newer, `rsync`, and either the container runtime or the tools.
-2. Put the state directory (`~/.edr/croc` by default) on a filesystem that
-   every host mounts. A shared home directory works well.
+2. Put `~/.edr` on a filesystem that every host mounts. It holds the
+   state directory `~/.edr/croc` and the seat leases that the drivers of
+   all your projects share. A shared home directory works well.
 3. If a tool probe or a hook has to run on the hosts, keep the site
    directory on a shared filesystem as well.
 4. If some hosts lack a tool, list the tools each host does have under
