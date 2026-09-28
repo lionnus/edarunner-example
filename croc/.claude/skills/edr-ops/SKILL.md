@@ -12,14 +12,12 @@ behind.
 ## The loop
 
 1. Look. Run `edr brief` to see the project, its state and the runs
-   that need a decision. On edarunner before 0.4.0, run
-   `edr --json status --triage` instead. Before you trust a running
-   count, confirm it with `edr status --live`.
+   that need a decision. Before you trust a running count, confirm it
+   with `edr status --live`.
 2. Decide. Before you act on a run, read its story with
-   `edr brief --run <handle>`, or `edr status <handle>` and
-   `edr events --run <handle>` on an older edarunner. The core's
-   `AGENTS.md` says what to check for each state. Resume a `dead` run
-   with `--from`, so that it keeps its checkpoints.
+   `edr brief --run <handle>`. The core's `AGENTS.md` says what to check
+   for each state. Resume a `dead` run with `--from`, so that it keeps
+   its checkpoints.
 3. Act. Run the command with `--dry-run` first and read every path it
    prints. Then run it for real. A stop or a retire needs `--why` with the
    state and the evidence, for example

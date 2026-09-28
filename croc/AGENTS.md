@@ -42,8 +42,7 @@ manifest. Requests for the site go into `data/handoff/croc_to_site.md`.
 1. Start each session with `edr brief`, which describes the project, its
    flow, the site as it applies here, and the runs that need a decision.
    `edr brief --run <handle>` prints the history of a single run; read it
-   before you debug that run. On edarunner versions before 0.4.0, use
-   `edr --json status --triage` instead.
+   before you debug that run.
 2. Pass `--json` on every call and look at `code` first: 0 means done,
    1 means refused, 2 means there was nothing to do, and 3 means a host
    failed.

@@ -252,7 +252,7 @@ The snapshot contains `manifest.json` with a sha256 for every file,
 each label, under `<label>/`. Copy the directory into your analysis as it
 is, and quote the hash next to every number you take from it.
 
-If you prefer MLflow, edarunner 0.3.0 can write the database into a
+If you prefer MLflow, edarunner can also write the database into a
 local MLflow tracking store, which `mlflow ui` then opens. The export
 needs the `mlflow` extra of edarunner:
 
@@ -287,9 +287,8 @@ it. `croc/.claude/settings.json` runs `edr brief` when a session starts,
 so the agent begins with the flow, the state and the runs that need a
 decision, and it sends a short note through `edr notify` after each turn.
 The skill in `croc/.claude/skills/edr-ops/` walks through the triage loop.
-`edr brief` needs edarunner 0.4.0 or newer; with an older version the hook
-falls back to `edr status --triage`. To reach a session from your phone,
-look at the `/claude` command that is commented out in `site/site.toml`.
+To reach a session from your phone, look at the `/claude` command that is
+commented out in `site/site.toml`.
 
 None of these files name a host, a user or a chat. The hosts belong in
 your lab's private site file and the chat in your own `user.toml`, and
@@ -305,6 +304,11 @@ edr retire --batch synth --why "walkthrough done"
 `retire` checks each path before it deletes a run tree, and it refuses to
 delete a tree whose results haven't been collected yet. The database, the
 collected reports and your snapshots all stay on the head node.
+
+Retiring the last batch on a commit also removes its clone in `../rtl-wt/`,
+but only when the path holds the safety marker `/edr/`. The clone of the
+walkthrough doesn't, so `retire` keeps it and says so in one line. Delete
+it by hand once no batch uses that commit.
 
 ## Moving to a lab farm
 
@@ -354,11 +358,6 @@ The edarunner documentation lives at <https://lionnus.github.io/edarunner/>.
   image runs through the workflow's `container` key instead.
 - The DRC stage only checks the BEOL rules of the IHP deck, for reasons
   given in `croc/README.md`. Its count is not a signoff result.
-- In edarunner 0.3.0, `edr retire --batch` refuses to retire the last
-  batch on a commit. It tries to remove the clone `../rtl-wt/<hash>` as
-  well, and that path doesn't contain the safety marker `/edr/`. Until
-  this is fixed, retire those runs one by one with their handles, for
-  example `edr retire ihp13@croc --why "done"`.
 
 ## License
 
