@@ -30,6 +30,7 @@ to look at.
 
 ## Numbers
 
-`edr metrics --source b714f2d` gives the metrics of Croc `v2.0.0`. Every
+`edr metrics --source b714f2d` gives the metrics of Croc `v2.0.0`. The tag
+is the one `edr checkout` prints; don't derive it with git. Every
 row names the report it came from, so read that report before you quote a
-number, and give the hash with it.
+number, and give the tag with it.

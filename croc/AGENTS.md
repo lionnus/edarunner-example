@@ -54,6 +54,8 @@ manifest. Requests for the site go into `data/handoff/croc_to_site.md`.
 5. When a long task ends or needs a person, report it with
    `edr notify "<text>"`.
 
-The source tag is the short hash of the Croc commit, `b714f2d` for
-`v2.0.0`. Pass it to `edr metrics --source` and `edr export --source`, and
-quote it next to every number you report.
+The source tag is the one `edr checkout` prints, `b714f2d` for `v2.0.0`.
+Take it from that output (`edr --json checkout <ref>` puts it in
+`data.source`) and never derive it with git. Pass it to
+`edr metrics --source` and `edr export --source`, and quote it next to
+every number you report.
