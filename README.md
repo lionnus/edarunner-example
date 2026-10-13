@@ -216,8 +216,9 @@ extracts each stage's metrics as soon as that stage ends.
 
 All the numbers end up in a single SQLite file, `data/edr.db`, and each
 one remembers which report it came from. You always ask for one source at
-a time, named by its source tag: the short hash of the Croc commit that
-`edr checkout` printed.
+a time, named by the source tag that `edr checkout` printed: `b714f2d`
+for Croc v2.0.0. Take the tag from that line rather than working it out
+with git, since edarunner owns the rule that makes it.
 
 ```sh
 edr metrics --source b714f2d
